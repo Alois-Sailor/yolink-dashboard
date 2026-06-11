@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<!-- saved from url=(0065)file:///C:/Users/Alois%20Langer/Downloads/yolink_dashboard_6.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SageGuard Senior, LLC for Health Alert</title>
+  <script src="./SageGuard Senior, LLC for Health Alert_files/mqttws31.min.js.download"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .hdr {
+      text-align: center;
+      padding: 20px 0;
+      border-bottom: 1px solid #1e293b;
+      margin-bottom: 20px;
+    }
+    .hdr h1 { font-size: 24px; color: #f8fafc; margin-bottom: 8px; }
+    .hdr .meta { font-size: 13px; color: #64748b; }
+
+    .ms {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    .mo { background: #166534; color: #86efac; }
+    .mx { background: #991b1b; color: #fca5a5; }
+    .my { background: #713f12; color: #fde68a; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid #334155;
+      transition: border-color 0.3s;
+    }
+    .card.updated { border-color: #60a5fa; }
+
+    .ct { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .ci { font-size: 28px; }
+    .cn { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+    .cy { font-size: 12px; color: #64748b; }
+
+    .cs {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      transition: background 0.3s;
+    }
+
+    .cd { margin-top: 10px; font-size: 13px; color: #94a3b8; }
+    .cd span { margin-right: 16px; }
+    .od { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+    .on { background: #22c55e; }
+    .of { background: #ef4444; }
+
+    /* Health tile specific styles */
+    .health-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 10px;
+      letter-spacing: 0.5px;
+    }
+    .status-ok   { background: #166534; color: #86efac; }
+    .status-emrg { background: #7f1d1d; color: #fca5a5; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%   { opacity: 1; }
+      50%  { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    .state-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-top: 6px;
+    }
+    .dist-label {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .empty .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty h2 { font-size: 18px; color: #94a3b8; margin-bottom: 8px; }
+    .empty p { font-size: 14px; line-height: 1.6; }
+
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>SageGuard Senior, LLC for Health Alert</h1>
+  <div class="meta">
+    <span id="deviceCount">6</span> devices • Updated: <span id="lastUpdate">4:31:41 AM</span>
+    <span class="ms mo" id="connBadge" style="background:#713f12;color:#fde68a">Connected</span>
+  </div>
+</div>
+
+<div class="grid" id="grid"><div class="card" id="card_Al_Bed">
+    <div class="ct">
+      <div style="font-size:13px;font-weight:600;color:#60a5fa">BED SENSOR</div>
+    </div>
+    <div class="cn">Al Bed</div>
+    <div class="health-icon" style="font-size:36px;margin-top:10px">🛌</div>
+    <div class="state-label">In Bed</div>
+    <div class="dist-label" style="color:#94a3b8;font-size:13px">Left Side — Still</div>
+  </div><div class="card" id="card_Al_Health">
+    <div class="ct">
+      <div style="font-size:13px;font-weight:600;color:#60a5fa">HEALTH SENSOR</div>
+    </div>
+    <div class="cn">Al Health</div>
+    <div class="health-icon" style="font-size:36px;margin-top:10px">🛌</div>
+    <div class="state-label">In Bed</div>
+    <div class="dist-label" style="color:#94a3b8;font-size:13px">Still</div>
+    <div class="dist-label">Distance: 0.8m</div>
+    <div class="status-badge status-ok">✓ Status: OK</div>
+  </div><div class="card" id="card_Al_iBeacon">
+    <div class="ct">
+      <div style="font-size:13px;font-weight:600;color:#60a5fa">iBEACON</div>
+    </div>
+    <div class="cn">Al iBeacon</div>
+    <div class="health-icon" style="font-size:36px;margin-top:10px">📻</div>
+    <div class="state-label">In Range</div>
+    <div class="dist-label">Distance: 1.2m</div>
+  </div><div class="card" id="card_Al_Position">
+    <div class="ct">
+      <div style="font-size:13px;font-weight:600;color:#60a5fa">POSITION</div>
+    </div>
+    <div class="cn">Al Position</div>
+    <div class="health-icon" style="margin-top:10px"><svg width="64" height="32" viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="8" cy="16" r="5" fill="#3b82f6"></circle>
+    <line x1="13" y1="16" x2="50" y2="16" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"></line>
+    <line x1="30" y1="16" x2="30" y2="8" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"></line>
+    <line x1="30" y1="16" x2="30" y2="24" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"></line>
+    <line x1="50" y1="16" x2="56" y2="10" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"></line>
+    <line x1="50" y1="16" x2="56" y2="22" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"></line>
+  </svg></div>
+    <div class="state-label">Left Side</div>
+  </div><div class="card" id="card_Elliott_Door_Slider">
+    <div class="ct">
+      <div class="ci">🚪</div>
+      <div>
+        <div class="cn">Elliott Door Slider</div>
+        <div class="cy">DoorSensor</div>
+      </div>
+    </div>
+    <div class="cs" style="background:#22c55e">closed</div>
+    <div class="cd">
+      <span><span class="od on"></span>Online</span>
+      <span>Battery: 3</span>
+    </div>
+  </div><div class="card" id="card_Elliott_Door_Front">
+    <div class="ct">
+      <div class="ci">🚪</div>
+      <div>
+        <div class="cn">Elliott Door Front</div>
+        <div class="cy">DoorSensor</div>
+      </div>
+    </div>
+    <div class="cs" style="background:#22c55e">closed</div>
+    <div class="cd">
+      <span><span class="od on"></span>Online</span>
+      <span>Battery: 3</span>
+    </div>
+  </div></div>
+
+<script>
+// ============================================================
+// CONFIGURATION
+// ============================================================
+function getParam(name, def) {
+  const url = new URLSearchParams(window.location.search);
+  return url.get(name) || def;
+}
+
+const BROKER = getParam('broker', '43b1039d272f44edb3d5ad3a405baddb.s1.eu.hivemq.cloud');
+const PORT   = parseInt(getParam('port', '8884'));
+const USER   = getParam('user', 'SageGuard');
+const PASS   = getParam('pass', 'Yolinkaccess#2412');
+const MAC    = getParam('base', 'e072a1fb8ea0');
+const TOPIC  = 'yolink/' + MAC + '/#';
+
+// ============================================================
+// DEVICE STATE TABLE
+// ============================================================
+const devices = {};
+
+// ============================================================
+// SVG ICONS for health sensors
+// ============================================================
+
+// Upright stick figure (vertical/standing)
+function svgVertical(color) {
+  color = color || '#22c55e';
+  return `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="8" r="5" fill="${color}"/>
+    <line x1="24" y1="13" x2="24" y2="32" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="14" y1="20" x2="34" y2="20" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="24" y1="32" x2="16" y2="44" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="24" y1="32" x2="32" y2="44" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// Horizontal figure lying on left side
+function svgHorizontalLeft(color) {
+  color = color || '#22c55e';
+  return `<svg width="64" height="32" viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="8" cy="16" r="5" fill="${color}"/>
+    <line x1="13" y1="16" x2="50" y2="16" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="30" y1="16" x2="30" y2="8" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="30" y1="16" x2="30" y2="24" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="50" y1="16" x2="56" y2="10" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="50" y1="16" x2="56" y2="22" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// Horizontal figure lying on right side (mirrored)
+function svgHorizontalRight(color) {
+  color = color || '#22c55e';
+  return `<svg width="64" height="32" viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="56" cy="16" r="5" fill="${color}"/>
+    <line x1="51" y1="16" x2="14" y2="16" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="34" y1="16" x2="34" y2="8" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="34" y1="16" x2="34" y2="24" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="14" y1="16" x2="8" y2="10" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="14" y1="16" x2="8" y2="22" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// Falling figure (diagonal, red)
+function svgFalling() {
+  return `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="36" cy="8" r="5" fill="#ef4444"/>
+    <line x1="32" y1="12" x2="16" y2="26" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+    <line x1="28" y1="16" x2="38" y2="22" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+    <line x1="16" y1="26" x2="8" y2="36" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+    <line x1="16" y1="26" x2="26" y2="38" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+    <line x1="6" y1="42" x2="42" y2="42" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,3"/>
+  </svg>`;
+}
+
+// ============================================================
+// STANDARD ICONS
+// ============================================================
+function getIcon(type) {
+  const icons = {
+    DoorSensor:    '&#128682;',
+    THSensor:      '&#127777;',
+    LeakSensor:    '&#128167;',
+    MotionSensor:  '&#128065;',
+    Outlet:        '&#128268;',
+    Plug:          '&#128268;',
+    Manipulator:   '&#128295;',
+    Hub:           '&#128225;',
+    Lock:          '&#128274;',
+    Siren:         '&#128276;',
+    GarageDoor:    '&#127968;',
+    Fob:           '&#128273;'
+  };
+  return icons[type] || '&#128223;';
+}
+
+function getColor(type, state) {
+  const s = (state || '').toLowerCase();
+  if (s === 'closed' || s === 'normal' || s === 'on') return '#22c55e';
+  if (s === 'open' && type === 'DoorSensor') return '#ef4444';
+  if (s === 'open') return '#22c55e';
+  if (s === 'alert' || s === 'alarm' || s === 'leak') return '#ef4444';
+  if (s === 'unknown' || s === 'see app') return '#a3a3a3';
+  return '#3b82f6';
+}
+
+// ============================================================
+// HEALTH TILE RENDERERS
+// ============================================================
+
+function renderBedTile(name, d) {
+  // Get companion sensor states
+  const radarName = name.replace(/Bed/i, 'Health').replace(/bed/i, 'health');
+  const posName   = name.replace(/Bed/i, 'Position').replace(/bed/i, 'position');
+  const radar     = devices[radarName] || {};
+  const pos       = devices[posName] || {};
+
+  const bedState    = (d.state || '').toLowerCase();
+  const radarState  = (radar.state || '').toLowerCase();
+  const posState    = (pos.state || '').toLowerCase();
+  const distance    = d.distance || radar.distance || '';
+  const inBed       = bedState === 'in';
+  const absent      = radarState === 'absent';
+
+  // Status badge
+  const emergency = inBed && absent;
+  const statusHtml = emergency
+    ? `<div class="status-badge status-emrg">&#128680; Status: EMERGENCY</div>`
+    : `<div class="status-badge status-ok">&#10003; Status: OK</div>`;
+
+  // Position text
+  let posText = '';
+  if (posState === 'left')  posText = 'Left Side';
+  if (posState === 'right') posText = 'Right Side';
+
+  // Movement text from radar when in bed
+  let moveText = '';
+  if (inBed && radarState === 'present_moving') moveText = 'Moving';
+  if (inBed && radarState === 'present_still')  moveText = 'Still';
+
+  // Main label - always In Bed or Out of Bed
+  const mainLabel = inBed ? 'In Bed' : 'Out of Bed';
+
+  // Sub label - position and movement only when in bed
+  let subLabel = '';
+  if (inBed && posText && moveText)   subLabel = posText + ' — ' + moveText;
+  else if (inBed && posText)          subLabel = posText;
+  else if (inBed && moveText)         subLabel = moveText;
+
+  // Icon
+  let iconHtml = '';
+  if (inBed) {
+    iconHtml = '&#128716;'; // person in bed
+  } else if (!inBed && radarState === 'present_still') {
+    iconHtml = '&#127968;&#129485;'; // house + standing person
+  } else if (!inBed && radarState === 'present_moving') {
+    iconHtml = '&#127968;&#128694;'; // house + walking person
+  } else {
+    iconHtml = '&#128717;'; // empty bed
+  }
+
+  const subHtml = subLabel ? `<div class="dist-label" style="color:#94a3b8;font-size:13px">${subLabel}</div>` : '';
+
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `<div class="card" id="card_${safeId}">
+    <div class="ct">
+      <div style="font-size:13px;font-weight:600;color:#60a5fa">BED SENSOR</div>
+    </div>
+    <div class="cn">${name}</div>
+    <div class="health-icon" style="font-size:36px;margin-top:10px">${iconHtml}</div>
+    <div class="state-label">${mainLabel}</div>
+    ${subHtml}
+  </div>`;
+}
+
+function renderRadarTile(name, d) {
+  const state    = (d.state || '').toLowerCase();
+  const distance = d.distance || '';
+
+  // Look up companion bed sensor for emergency check
+  const bedName = name.replace(/Health/i, 'Bed').replace(/health/i, 'bed');
+  const bed     = devices[bedName] || {};
+  const inBed   = (bed.state || '').toLowerCase() === 'in';
+  const absent  = state === 'absent';
+
+  // Status badge
+  const emergency = inBed && absent;
+  const statusHtml = emergency
+    ? `<div class="status-badge status-emrg">&#128680; Status: EMERGENCY</div>`
+    : `<div class="status-badge status-ok">&#10003; Status: OK</div>`;
+
+  let iconHtml = '';
+  let label    = '';
+  let subLabel = '';
+
+  if (state === 'present_moving') {
+    const bedIn = inBed;
+    iconHtml = bedIn ? '&#128716;' : '&#128694;';
+    label    = bedIn ? 'In Bed' : 'Out of Bed — Moving';
+    subLabel = bedIn ? 'Moving' : '';
+  } else if (state === 'present_still') {
+    const bedIn = inBed;
+    iconHtml = bedIn ? '&#128716;' : '&#129485;';
+    label    = bedIn ? 'In Bed' : 'Out of Bed — Still';
+    subLabel = bedIn ? 'Still' : '';
+  } else if (state === 'absent') {
+    iconHtml = '&#128683;';
+    label    = 'Absent';
+  } else {
+    iconHtml = '&#128065;';
+    label    = state || 'unknown';
+  }
+
+  const distHtml = distance ? `<div class="dist-label">Distance: ${distance}</div>` : '';
+  const subHtml  = subLabel ? `<div class="dist-label" style="color:#94a3b8;font-size:13px">${subLabel}</div>` : '';
+  const safeId   = name.replace(/[^a-zA-Z0-9]/g, '_');
+
+  return `<div class="card" id="card_${safeId}">
+    <div class="ct">
+      <div style="font-size:13px;font-weight:600;color:#60a5fa">HEALTH SENSOR</div>
+    </div>
+    <div class="cn">${name}</div>
+    <div class="health-icon" style="font-size:36px;margin-top:10px">${iconHtml}</div>
+    <div class="state-label">${label}</div>
+    ${subHtml}
+    ${distHtml}
+    ${statusHtml}
+  </div>`;
+}
+
+function renderBeaconTile(name, d) {
+  const fall     = (d.fall || false);
+  const inRange  = (d.state || '').toLowerCase() === 'in_range';
+  const distance = d.distance || '';
+
+  // Fall takes priority
+  if (fall) {
+    const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+    return `<div class="card" id="card_${safeId}">
+      <div class="ct">
+        <div style="font-size:13px;font-weight:600;color:#60a5fa">iBEACON</div>
+      </div>
+      <div class="cn">${name}</div>
+      <div class="health-icon" style="margin-top:10px">${svgFalling()}</div>
+      <div class="state-label" style="color:#ef4444">Fall Detected</div>
+      <div class="status-badge status-emrg" style="margin-top:10px">&#128680; Status: EMERGENCY</div>
+    </div>`;
+  }
+
+  let iconHtml = '&#128251;'; // satellite / beacon
+  let label    = inRange ? `In Range` : 'Out of Range';
+  let distHtml = '';
+
+  if (inRange && distance) {
+    distHtml = `<div class="dist-label">Distance: ${distance}</div>`;
+  }
+
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `<div class="card" id="card_${safeId}">
+    <div class="ct">
+      <div style="font-size:13px;font-weight:600;color:#60a5fa">iBEACON</div>
+    </div>
+    <div class="cn">${name}</div>
+    <div class="health-icon" style="font-size:36px;margin-top:10px">${iconHtml}</div>
+    <div class="state-label">${label}</div>
+    ${distHtml}
+  </div>`;
+}
+
+function renderPositionTile(name, d) {
+  const state = (d.state || '').toLowerCase();
+
+  let iconHtml = '';
+  let label    = '';
+
+  if (state === 'vertical') {
+    iconHtml = svgVertical('#22c55e');
+    label    = 'Vertical';
+  } else if (state === 'left') {
+    iconHtml = svgHorizontalLeft('#3b82f6');
+    label    = 'Left Side';
+  } else if (state === 'right') {
+    iconHtml = svgHorizontalRight('#3b82f6');
+    label    = 'Right Side';
+  } else {
+    iconHtml = svgVertical('#a3a3a3');
+    label    = 'Unknown';
+  }
+
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `<div class="card" id="card_${safeId}">
+    <div class="ct">
+      <div style="font-size:13px;font-weight:600;color:#60a5fa">POSITION</div>
+    </div>
+    <div class="cn">${name}</div>
+    <div class="health-icon" style="margin-top:10px">${iconHtml}</div>
+    <div class="state-label">${label}</div>
+  </div>`;
+}
+
+// ============================================================
+// STANDARD TILE
+// ============================================================
+function renderStandardTile(name, d) {
+  const color      = getColor(d.type, d.state);
+  const icon       = getIcon(d.type);
+  const onlineClass = d.online ? 'on' : 'of';
+  const onlineText  = d.online ? 'Online' : 'Offline';
+  const safeId      = name.replace(/[^a-zA-Z0-9]/g, '_');
+
+  return `<div class="card" id="card_${safeId}">
+    <div class="ct">
+      <div class="ci">${icon}</div>
+      <div>
+        <div class="cn">${name}</div>
+        <div class="cy">${d.type || ''}</div>
+      </div>
+    </div>
+    <div class="cs" style="background:${color}">${d.state || 'unknown'}</div>
+    <div class="cd">
+      <span><span class="od ${onlineClass}"></span>${onlineText}</span>
+      ${d.extraInfo ? `<span>${d.extraInfo}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// GRID UPDATE
+// ============================================================
+function updateGrid() {
+  const grid  = document.getElementById('grid');
+  const names = Object.keys(devices);
+  if (names.length === 0) return;
+
+  document.getElementById('deviceCount').textContent = names.length;
+  document.getElementById('lastUpdate').textContent  = new Date().toLocaleTimeString();
+
+  let html = '';
+  names.forEach(name => {
+    const d    = devices[name];
+    const type = (d.type || '').toLowerCase();
+
+    if (type === 'bedsensor') {
+      html += renderBedTile(name, d);
+    } else if (type === 'radarsensor') {
+      html += renderRadarTile(name, d);
+    } else if (type === 'ibeacon') {
+      html += renderBeaconTile(name, d);
+    } else if (type === 'positionsensor') {
+      html += renderPositionTile(name, d);
+    } else {
+      html += renderStandardTile(name, d);
+    }
+  });
+
+  grid.innerHTML = html;
+}
+
+function flashCard(name) {
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  const card   = document.getElementById('card_' + safeId);
+  if (card) {
+    card.classList.add('updated');
+    setTimeout(() => card.classList.remove('updated'), 2000);
+  }
+}
+
+// ============================================================
+// MQTT
+// ============================================================
+const clientId = 'yolink-web-' + Math.random().toString(16).substr(2, 8);
+const client   = new Paho.MQTT.Client(BROKER, PORT, '/mqtt', clientId);
+
+client.onConnectionLost = function(resp) {
+  setBadge('Disconnected', 'mx');
+  setTimeout(connect, 5000);
+};
+
+client.onMessageArrived = function(msg) {
+  const topic   = msg.destinationName;
+  const payload = msg.payloadString;
+
+  const parts = topic.split('/');
+  if (parts.length < 4) return;
+  const devName = parts[2].replace(/_/g, ' ');
+  const field   = parts[3];
+
+  if (field === 'json') {
+    try {
+      const data = JSON.parse(payload);
+      if (!devices[devName]) devices[devName] = {};
+      devices[devName].name      = data.name      || devName;
+      devices[devName].type      = data.type      || '';
+      devices[devName].state     = data.state     || 'unknown';
+      devices[devName].online    = data.online    || false;
+      devices[devName].extraInfo = data.extraInfo || '';
+      devices[devName].distance  = data.distance  || '';
+      devices[devName].fall      = data.fall      || false;
+      updateGrid();
+      flashCard(devName);
+    } catch(e) {
+      console.log('JSON parse error:', e);
+    }
+  }
+};
+
+function setBadge(text, cls) {
+  const b       = document.getElementById('connBadge');
+  b.textContent = text;
+  b.className   = 'ms ' + cls;
+}
+
+function connect() {
+  setBadge('Connecting...', 'my');
+  client.connect({
+    useSSL:   true,
+    userName: USER,
+    password: PASS,
+    onSuccess: function() {
+      setBadge('Connected', 'mo');
+      client.subscribe(TOPIC);
+    },
+    onFailure: function(err) {
+      setBadge('Failed', 'mx');
+      setTimeout(connect, 10000);
+    }
+  });
+}
+
+// ============================================================
+// DEMO DATA - remove when real sensors are built
+// ============================================================
+function loadDemoData() {
+  // Bed sensor - default in bed
+  devices['Al Bed'] = {
+    name: 'Al Bed', type: 'BedSensor',
+    state: 'in', online: true,
+    distance: '0.4m', extraInfo: ''
+  };
+  // Health sensor - default in bed (present still)
+  devices['Al Health'] = {
+    name: 'Al Health', type: 'RadarSensor',
+    state: 'present_still', online: true,
+    distance: '0.8m', extraInfo: ''
+  };
+  // iBeacon
+  devices['Al iBeacon'] = {
+    name: 'Al iBeacon', type: 'iBeacon',
+    state: 'in_range', online: true,
+    distance: '1.2m', fall: false, extraInfo: ''
+  };
+  // Position sensor
+  devices['Al Position'] = {
+    name: 'Al Position', type: 'PositionSensor',
+    state: 'left', online: true,
+    extraInfo: ''
+  };
+  updateGrid();
+}
+
+loadDemoData();
+connect();
+</script>
+
+
+</body></html>
