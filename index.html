@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SageGuard Senior, LLC for Health Alert</title>
+  <script src="paho-mqtt.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 16px;
+    }
+    .hdr {
+      text-align: center; padding: 20px 0;
+      border-bottom: 1px solid #1e293b; margin-bottom: 20px;
+    }
+    .hdr h1 { font-size: 24px; color: #f8fafc; margin-bottom: 8px; }
+    .hdr .meta { font-size: 13px; color: #64748b; }
+    .ms {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; margin-left: 6px;
+    }
+    .mo { background: #166534; color: #86efac; }
+    .mx { background: #991b1b; color: #fca5a5; }
+    .my { background: #713f12; color: #fde68a; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px; max-width: 1200px; margin: 0 auto;
+    }
+    .card {
+      background: #1e293b; border-radius: 10px; padding: 16px;
+      border: 1px solid #334155; transition: border-color 0.3s;
+    }
+    .card.updated { border-color: #60a5fa; }
+    .card.alert { border-color: #ef4444; background: #2a1818; }
+
+    .ct { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .ci { font-size: 28px; }
+    .cn { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+    .cy { font-size: 12px; color: #64748b; }
+    .label {
+      display: inline-block; font-size: 13px; font-weight: 600;
+      color: #60a5fa; margin-bottom: 4px;
+    }
+    .cs {
+      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      font-size: 14px; font-weight: 600; color: white;
+    }
+    .cd { margin-top: 10px; font-size: 13px; color: #94a3b8; }
+    .cd span { margin-right: 16px; }
+    .od { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+    .on { background: #22c55e; }
+    .of { background: #ef4444; }
+
+    .health-icon {
+      display: flex; align-items: center; justify-content: center;
+      margin: 10px 0;
+    }
+    .state-label { font-size: 15px; font-weight: 600; color: #f1f5f9; margin-top: 6px; }
+    .sub-label { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    .dist-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+    /* Room environment grid inside the tile */
+    .env-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-top: 10px;
+    }
+    .env-item {
+      background: #0f172a; padding: 10px; border-radius: 6px;
+      text-align: center;
+    }
+    .env-icon { font-size: 22px; margin-bottom: 4px; }
+    .env-val { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+    .env-name { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    .motion-alert {
+      grid-column: 1 / -1;
+      background: #422006; color: #fde68a;
+      padding: 8px; border-radius: 6px; text-align: center;
+      font-size: 13px; font-weight: 600;
+    }
+
+    .activity-icon { font-size: 40px; text-align: center; margin: 10px 0; }
+    .activity-text { font-size: 15px; text-align: center; font-weight: 600; }
+    .activity-time { font-size: 12px; text-align: center; color: #94a3b8; margin-top: 4px; }
+    .smoke-alert {
+      background: #7f1d1d; color: #fca5a5;
+      padding: 8px; border-radius: 6px; text-align: center;
+      font-size: 13px; font-weight: 600; margin-top: 8px;
+    }
+
+    .empty {
+      text-align: center; padding: 60px 20px;
+      color: #64748b; max-width: 400px; margin: 0 auto;
+    }
+    .empty .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty h2 { font-size: 18px; color: #94a3b8; margin-bottom: 8px; }
+    .empty p { font-size: 14px; line-height: 1.6; }
+
+    /* Sequence number input - bottom left, all tiles */
+    .seq-input {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      width: 60px;
+      padding: 4px 6px;
+      font-size: 14px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      color: #94a3b8;
+      text-align: center;
+    }
+    .seq-input:focus { outline: none; border-color: #60a5fa; color: #e2e8f0; }
+    .seq-input.dup { border-color: #ef4444; background: #2a1818; }
+    
+    /* Tie error banner */
+    .tie-banner {
+      max-width: 1200px;
+      margin: 0 auto 12px auto;
+      padding: 10px 16px;
+      background: #7f1d1d;
+      color: #fecaca;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .tie-banner.hidden { display: none; }
+    
+    /* Battery indicator */
+    .battery {
+      position: absolute; top: 12px; right: 12px;
+      font-size: 11px; color: #94a3b8;
+      display: flex; align-items: center; gap: 3px;
+    }
+    .battery.low { color: #ef4444; }
+    .card { position: relative; }
+
+    /* Last update */
+    .last-update {
+      font-size: 10px; color: #475569;
+      margin-top: 8px; text-align: right; font-style: italic;
+    }
+
+    /* System status banner */
+    .sys-banner {
+      max-width: 1200px; margin: 0 auto 20px auto;
+      padding: 14px 20px; border-radius: 10px;
+      text-align: center; font-size: 16px; font-weight: 600;
+    }
+    .sys-banner.ok    { background: #166534; color: #86efac; }
+    .sys-banner.alert { background: #7f1d1d; color: #fca5a5; animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+      0%   { opacity: 1; }
+      50%  { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>SageGuard Senior, LLC for Health Alert</h1>
+  <div class="meta">
+    <span id="deviceCount">0</span> devices &bull; Updated: <span id="lastUpdate">Never</span>
+    <span class="ms" id="connBadge" style="background:#713f12;color:#fde68a">Connecting...</span>
+  </div>
+</div>
+
+<div class="sys-banner ok" id="sysBanner">&#10003; All Normal</div>
+<div class="tie-banner hidden" id="tieBanner">&#9888; Duplicate sequence numbers - please fix to set order</div>
+
+<div class="grid" id="grid">
+  <div class="empty">
+    <div class="icon">&#128225;</div>
+    <h2>Connecting to broker...</h2>
+    <p>Waiting for device data. Make sure the YoLink Monitor is powered on and connected.</p>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION
+// ============================================================
+function getParam(name, def) {
+  const url = new URLSearchParams(window.location.search);
+  return url.get(name) || def;
+}
+const BROKER = getParam('broker', '43b1039d272f44edb3d5ad3a405baddb.s1.eu.hivemq.cloud');
+const PORT   = parseInt(getParam('port', '8884'));
+const USER   = getParam('user', 'SageGuard');
+const PASS   = getParam('pass', 'Yolinkaccess#2412');
+const MAC    = getParam('base', 'e072a1fb8ea0');
+const TOPIC  = 'yolink/+/+/json'; // wildcard MAC - receives from all ESP32s
+
+// ============================================================
+// DEVICE STATE TABLE
+// ============================================================
+const devices = {};
+
+// ============================================================
+// CUSTOM SVG ICONS
+// ============================================================
+function svgVertical(color) {
+  color = color || '#22c55e';
+  return `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="8" r="5" fill="${color}"/>
+    <line x1="24" y1="13" x2="24" y2="32" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="14" y1="20" x2="34" y2="20" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="24" y1="32" x2="16" y2="44" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="24" y1="32" x2="32" y2="44" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+function svgHorizontalLeft(color) {
+  color = color || '#3b82f6';
+  return `<svg width="64" height="32" viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="8" cy="16" r="5" fill="${color}"/>
+    <line x1="13" y1="16" x2="50" y2="16" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="30" y1="16" x2="30" y2="8" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="30" y1="16" x2="30" y2="24" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="50" y1="16" x2="56" y2="10" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="50" y1="16" x2="56" y2="22" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+function svgHorizontalRight(color) {
+  color = color || '#3b82f6';
+  return `<svg width="64" height="32" viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="56" cy="16" r="5" fill="${color}"/>
+    <line x1="51" y1="16" x2="14" y2="16" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="34" y1="16" x2="34" y2="8" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="34" y1="16" x2="34" y2="24" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="14" y1="16" x2="8" y2="10" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+    <line x1="14" y1="16" x2="8" y2="22" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+function svgFalling() {
+  return `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="36" cy="8" r="5" fill="#ef4444"/>
+    <line x1="32" y1="12" x2="16" y2="26" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+    <line x1="28" y1="16" x2="38" y2="22" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+    <line x1="16" y1="26" x2="8" y2="36" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+    <line x1="16" y1="26" x2="26" y2="38" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+    <line x1="6" y1="42" x2="42" y2="42" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,3"/>
+  </svg>`;
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function findCompanion(name, fromType, toType) {
+  const re = new RegExp(fromType, 'i');
+  const candidateName = name.replace(re, toType);
+  return devices[candidateName] || null;
+}
+
+function batteryHtml(d) {
+  if (d.battery === undefined || d.battery === null || d.battery === '') return '';
+  const lvl = parseInt(d.battery);
+  if (isNaN(lvl)) return '';
+  const low = lvl <= 20;
+  let icon = '&#128267;'; // full battery
+  if (lvl <= 50) icon = '&#128266;'; // medium
+  if (lvl <= 20) icon = '&#128268;'; // low
+  return `<div class="battery${low?' low':''}">${icon} ${lvl}%</div>`;
+}
+
+function lastUpdateHtml(d) {
+  if (!d._lastUpdate) return '';
+  const secs = Math.floor((Date.now() - d._lastUpdate) / 1000);
+  let txt;
+  if (secs < 60) txt = secs + 's ago';
+  else if (secs < 3600) txt = Math.floor(secs/60) + 'm ago';
+  else txt = Math.floor(secs/3600) + 'h ago';
+  return `<div class="last-update">Updated ${txt}</div>`;
+}
+
+// Sequence number handling - persisted to localStorage
+function getSeqNum(name) {
+  try {
+    const stored = localStorage.getItem("seq:" + name);
+    return stored === null ? "" : stored;
+  } catch (e) { return ""; }
+}
+
+function setSeqNum(name, value) {
+  try {
+    if (value === "") localStorage.removeItem("seq:" + name);
+    else localStorage.setItem("seq:" + name, value);
+  } catch (e) {}
+}
+
+// Sort device names by sequence number, then alphabetically.
+// Tiles with sequence value "-" are hidden entirely.
+// Returns { sorted: [names], duplicates: [seq numbers used more than once] }
+function sortNames(names) {
+  const numbered = [];
+  const unnumbered = [];
+  for (const n of names) {
+    const s = getSeqNum(n);
+    if (s === "-") continue; // hidden tile
+    if (s !== "" && !isNaN(parseInt(s))) numbered.push({name: n, seq: parseInt(s)});
+    else unnumbered.push(n);
+  }
+  // Detect duplicates
+  const seenSeq = {};
+  const dupes = new Set();
+  for (const item of numbered) {
+    if (seenSeq[item.seq]) dupes.add(item.seq);
+    seenSeq[item.seq] = true;
+  }
+  // Sort numbered ascending; tiebreak by name
+  numbered.sort((a, b) => a.seq - b.seq || a.name.localeCompare(b.name));
+  // Sort unnumbered alphabetically (these are plain strings)
+  unnumbered.sort((a, b) => a.localeCompare(b));
+  return {
+    sorted: [...numbered.map(x => x.name), ...unnumbered],
+    duplicates: dupes
+  };
+}
+
+function onSeqChange(e) {
+  const input = e.target;
+  const name = input.dataset.name;
+  let v = input.value.trim();
+  // Accept only blank, a positive integer, or "-" (to hide)
+  if (v !== "" && v !== "-" && (isNaN(parseInt(v)) || parseInt(v) < 1)) {
+    v = ""; // invalid -> blank
+    input.value = "";
+  }
+  setSeqNum(name, v);
+  updateGrid();
+}
+
+function countAlerts() {
+  let count = 0;
+  for (const name in devices) {
+    const d = devices[name];
+    const type = (d.type || '').toLowerCase();
+    const nameLower = name.toLowerCase();
+    if (d.fall) count++;
+    if (d.smoke) count++;
+    if (d.co) count++;
+    if (type === 'motionsensor' && nameLower.includes('activity') && d.alarmActive) count++;
+    if (type === 'bedsensor' && d.bedAlarmActive) count++;
+    if (type === 'bedsensor' && (d.durationStatus || '').toLowerCase() === 'alert') count++;
+    if (type === 'bedsensor' && (d.state || '').toLowerCase() === 'in') {
+      const health = findCompanion(name, 'Bed', 'Health');
+      if (health && (health.state || '').toLowerCase() === 'absent') count++;
+    }
+  }
+  return count;
+}
+
+function updateBanner() {
+  const banner = document.getElementById('sysBanner');
+  const n = countAlerts();
+  if (n === 0) {
+    banner.className = 'sys-banner ok';
+    banner.innerHTML = '&#10003; All Normal';
+  } else {
+    banner.className = 'sys-banner alert';
+    banner.innerHTML = `&#9888; ${n} Active Alert${n>1?'s':''}`;
+  }
+}
+
+// ============================================================
+// STANDARD ICONS
+// ============================================================
+function getIcon(type) {
+  const icons = {
+    DoorSensor:    '&#128682;',
+    THSensor:      '&#127777;',
+    LeakSensor:    '&#128167;',
+    MotionSensor:  '&#128065;',
+    Outlet:        '&#128268;',
+    Plug:          '&#128268;',
+    Manipulator:   '&#128295;',
+    Hub:           '&#128225;',
+    Lock:          '&#128274;',
+    Siren:         '&#128276;',
+    GarageDoor:    '&#127968;',
+    Fob:           '&#128273;'
+  };
+  return icons[type] || '&#128223;';
+}
+function getColor(type, state) {
+  const s = (state || '').toLowerCase();
+  if (s === 'closed' || s === 'normal' || s === 'on') return '#22c55e';
+  if (s === 'open' && type === 'DoorSensor') return '#ef4444';
+  if (s === 'open') return '#22c55e';
+  if (s === 'alert' || s === 'alarm' || s === 'leak') return '#ef4444';
+  if (s === 'unknown' || s === 'see app') return '#a3a3a3';
+  return '#3b82f6';
+}
+
+// ============================================================
+// HEALTH TILE RENDERERS
+// ============================================================
+
+function renderBedRuleTile(name, d) {
+  // Tile shows the BED DURATION rule status
+  const alarm = d.alarmActive || false;
+  const enabled = d.enabled !== false;
+  const threshold = d.thresholdMinutes || 0;
+  let elapsedText = "Not in bed";
+  if (d.elapsedSeconds !== undefined) {
+    const mins = Math.floor(d.elapsedSeconds / 60);
+    if (mins < 60) elapsedText = mins + " min";
+    else elapsedText = Math.floor(mins/60) + "h " + (mins%60) + "m";
+  }
+  const iconColor = alarm ? '#ef4444' : '#22c55e';
+  const iconHtml = alarm ? '&#9888;' : '&#128716;';
+  const text = alarm ? 'IN BED TOO LONG' : (enabled ? 'OK' : 'Disabled');
+  const textColor = alarm ? '#ef4444' : (enabled ? '#22c55e' : '#94a3b8');
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `<div class="card" id="card_${safeId}">
+    <div class="label">BED DURATION RULE</div>
+    <div class="cn">${name}</div>
+    <div class="activity-icon" style="color:${iconColor}">${iconHtml}</div>
+    <div class="activity-text" style="color:${textColor}">${text}</div>
+    <div class="activity-time">In bed: ${elapsedText} (threshold ${threshold} min)</div>
+  </div>`;
+}
+
+function renderBedTile(name, d) {
+  const inBed = (d.state || '').toLowerCase() === 'in';
+
+  // Cross-sensor display: pick up position from paired position sensor
+  const pos = findCompanion(name, 'Bed', 'Position');
+  const posState = pos ? (pos.state || '').toLowerCase() : '';
+  let posText = '';
+  if (inBed && posState === 'left')  posText = 'Left Side';
+  if (inBed && posState === 'right') posText = 'Right Side';
+
+  // Cross-sensor display: pick up movement from paired health/radar sensor
+  const health = findCompanion(name, 'Bed', 'Health');
+  const healthState = health ? (health.state || '').toLowerCase() : '';
+  let moveText = '';
+  if (inBed && healthState === 'present_moving') moveText = 'Moving';
+  if (inBed && healthState === 'present_still')  moveText = 'Still';
+
+  let subLabel = '';
+  if (posText && moveText) subLabel = posText + ' — ' + moveText;
+  else if (posText) subLabel = posText;
+  else if (moveText) subLabel = moveText;
+
+  // Icon depends on bed state AND companion health sensor
+  let iconHtml;
+  if (inBed) {
+    iconHtml = '&#128716;'; // person in bed
+  } else if (healthState === 'present_moving') {
+    iconHtml = '&#127968;&#128694;'; // house + walking
+  } else if (healthState === 'present_still') {
+    iconHtml = '&#127968;&#129485;'; // house + standing
+  } else if (healthState === 'absent') {
+    iconHtml = '&#128682;'; // open door
+  } else {
+    // Empty bed icon - local SVG from repo (Twemoji style)
+    iconHtml = '<img src="bed.svg" width="48" height="48" style="display:inline-block;vertical-align:middle" alt="empty bed">'; // empty bed
+  }
+  const mainLabel = inBed ? 'In Bed' : 'Out of Bed';
+  const subHtml = subLabel ? `<div class="sub-label">${subLabel}</div>` : '';
+
+  // Timestamps and duration - prefer rule engine merge data
+  const since = d.since || '';
+  const sinceHtml = inBed && since ? `<div class="dist-label">Since: ${since}</div>` : '';
+
+  // Bed rule engine data merges into this tile via the message handler
+  const bedAlarm = d.bedAlarmActive || false;
+  const elapsedSec = d.bedElapsedSeconds;
+  const thresholdMin = d.bedThresholdMin;
+  
+  let durHtml = '';
+  if (inBed && elapsedSec !== undefined) {
+    const mins = Math.floor(elapsedSec / 60);
+    let durText;
+    if (mins < 60) durText = mins + " min";
+    else durText = Math.floor(mins/60) + "h " + (mins%60) + "m";
+    const durColor = bedAlarm ? '#ef4444' : '#22c55e';
+    const durIcon = bedAlarm ? '&#9888;' : '&#10003;';
+    const thrText = thresholdMin ? ` (limit ${thresholdMin} min)` : '';
+    durHtml = `<div class="dist-label" style="color:${durColor};font-weight:600">${durIcon} Duration: ${durText}${thrText}</div>`;
+  }
+  // Legacy support: also check d.duration / d.durationStatus if rule data missing
+  if (!durHtml && inBed && d.duration) {
+    const durStatus = (d.durationStatus || 'ok').toLowerCase();
+    const durColor = durStatus === 'alert' ? '#ef4444' : '#22c55e';
+    const durIcon = durStatus === 'alert' ? '&#9888;' : '&#10003;';
+    durHtml = `<div class="dist-label" style="color:${durColor};font-weight:600">${durIcon} Duration: ${d.duration}</div>`;
+  }
+
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `<div class="card${bedAlarm?' alert':''}" id="card_${safeId}">
+    <div class="label">BED SENSOR</div>
+    <div class="cn">${name}</div>
+    <div class="health-icon" style="font-size:36px">${iconHtml}</div>
+    <div class="state-label">${mainLabel}</div>
+    ${subHtml}
+    ${sinceHtml}
+    ${durHtml}
+  </div>`;
+}
+
+function renderRadarTile(name, d) {
+  const state = (d.state || '').toLowerCase();
+  const distance = d.distance || '';
+
+  // Cross-sensor display: if paired bed sensor says in bed, show "In Bed"
+  const bed = findCompanion(name, 'Health', 'Bed');
+  const bedIn = bed && (bed.state || '').toLowerCase() === 'in';
+
+  let iconHtml = '';
+  let label = '';
+  let subText = '';
+
+  if (bedIn && (state === 'present_moving' || state === 'present_still')) {
+    iconHtml = '&#128716;';
+    label = 'In Bed';
+    subText = state === 'present_moving' ? 'Moving' : 'Still';
+  } else if (state === 'present_moving') {
+    iconHtml = '&#128694;';
+    label = 'Out of Bed — Moving';
+  } else if (state === 'present_still') {
+    iconHtml = '&#129485;';
+    label = 'Out of Bed — Still';
+  } else if (state === 'absent') {
+    iconHtml = '&#128683;';
+    label = 'Absent';
+  } else {
+    iconHtml = '&#128065;';
+    label = state || 'unknown';
+  }
+
+  const distHtml = distance ? `<div class="dist-label">Distance: ${distance}</div>` : '';
+  const subHtml  = subText  ? `<div class="sub-label">${subText}</div>`           : '';
+  const safeId   = name.replace(/[^a-zA-Z0-9]/g, '_');
+
+  return `<div class="card" id="card_${safeId}">
+    <div class="label">HEALTH SENSOR</div>
+    <div class="cn">${name}</div>
+    <div class="health-icon" style="font-size:36px">${iconHtml}</div>
+    <div class="state-label">${label}</div>
+    ${subHtml}
+    ${distHtml}
+  </div>`;
+}
+
+function renderBeaconTile(name, d) {
+  const fall = d.fall || false;
+  const inRange = (d.state || '').toLowerCase() === 'in_range';
+  const distance = d.distance || '';
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+
+  if (fall) {
+    return `<div class="card alert" id="card_${safeId}">
+      <div class="label">iBEACON</div>
+      <div class="cn">${name}</div>
+      <div class="health-icon">${svgFalling()}</div>
+      <div class="state-label" style="color:#ef4444">Fall Detected</div>
+    </div>`;
+  }
+
+  const iconHtml = '&#128246;';
+  const label    = inRange ? 'In Range' : 'Out of Range';
+  const distHtml = (inRange && distance) ? `<div class="dist-label">Distance: ${distance}</div>` : '';
+
+  return `<div class="card" id="card_${safeId}">
+    <div class="label">iBEACON</div>
+    <div class="cn">${name}</div>
+    <div class="health-icon" style="font-size:36px">${iconHtml}</div>
+    <div class="state-label">${label}</div>
+    ${distHtml}
+  </div>`;
+}
+
+function renderPositionTile(name, d) {
+  const state = (d.state || '').toLowerCase();
+  let iconHtml = '';
+  let label = '';
+
+  if (state === 'vertical') {
+    iconHtml = svgVertical('#22c55e');
+    label = 'Vertical';
+  } else if (state === 'left') {
+    iconHtml = svgHorizontalLeft('#3b82f6');
+    label = 'Left Side';
+  } else if (state === 'right') {
+    iconHtml = svgHorizontalRight('#3b82f6');
+    label = 'Right Side';
+  } else {
+    iconHtml = svgVertical('#a3a3a3');
+    label = 'Unknown';
+  }
+
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `<div class="card" id="card_${safeId}">
+    <div class="label">POSITION</div>
+    <div class="cn">${name}</div>
+    <div class="health-icon">${iconHtml}</div>
+    <div class="state-label">${label}</div>
+  </div>`;
+}
+
+function renderEnvironmentTile(name, d) {
+  const temp     = d.temperature || '--';
+  const humidity = d.humidity    || '--';
+  const sound    = d.sound       || '--';
+  const light    = d.light       || '--';
+  const motion   = d.motion      || false;
+
+  const motionAt = d.motionAt || '';
+  const motionHtml = motion
+    ? `<div class="motion-alert">&#128065; Motion Detected${motionAt ? ' at ' + motionAt : ''}</div>`
+    : '';
+
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `<div class="card" id="card_${safeId}">
+    <div class="label">ROOM ENVIRONMENT</div>
+    <div class="cn">${name}</div>
+    <div class="env-grid">
+      <div class="env-item">
+        <div class="env-icon">&#127777;</div>
+        <div class="env-val">${temp}&deg;F</div>
+        <div class="env-name">Temperature</div>
+      </div>
+      <div class="env-item">
+        <div class="env-icon">&#128167;</div>
+        <div class="env-val">${humidity}%</div>
+        <div class="env-name">Humidity</div>
+      </div>
+      <div class="env-item">
+        <div class="env-icon">&#128266;</div>
+        <div class="env-val">${sound}</div>
+        <div class="env-name">Sound</div>
+      </div>
+      <div class="env-item">
+        <div class="env-icon">&#128161;</div>
+        <div class="env-val">${light} lux</div>
+        <div class="env-name">Light</div>
+      </div>
+      ${motionHtml}
+    </div>
+  </div>`;
+}
+
+function renderActivityTile(name, d) {
+  // Activity tile - uses rule engine data when merged, raw motion otherwise
+  // alarmActive (red) = inactivity timeout from rule engine
+  // raw motion detected (state=="alert") = activity, stay green but optional flash
+  const stateLower = (d.state || '').toLowerCase();
+  const motionNow = stateLower === 'alert';
+  const alarm = d.alarmActive || false; // rule engine inactivity alarm
+
+  // For elapsed time, prefer rule engine count, fallback to client tracking
+  if (motionNow) d._lastActivityMs = Date.now();
+  d._wasAlert = motionNow;
+
+  // Compute elapsed time string - prefer rule engine's elapsedSeconds
+  let elapsed = 'Not seen yet';
+  let secs = -1;
+  if (d.elapsedSeconds !== undefined) {
+    secs = parseInt(d.elapsedSeconds);
+  } else if (d._lastActivityMs) {
+    secs = Math.floor((Date.now() - d._lastActivityMs) / 1000);
+  }
+  if (secs >= 0) {
+    if (secs < 60) elapsed = secs + ' sec ago';
+    else if (secs < 3600) elapsed = Math.floor(secs/60) + ' min ago';
+    else if (secs < 86400) elapsed = Math.floor(secs/3600) + ' hr ago';
+    else elapsed = Math.floor(secs/86400) + ' days ago';
+  } else if (d.lastSeen) {
+    elapsed = d.lastSeen;
+  }
+  const lastSeen = elapsed;
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+
+  // Activity is GOOD when motion is happening recently (green).
+  // Rule-engine INACTIVITY ALARM (timeout exceeded without motion) -> RED.
+  // Display text:
+  //   alarm -> "INACTIVITY ALARM" (red)
+  //   motion now -> "Activity Alert" (green flash)
+  //   otherwise -> "Active" (green)
+  const iconColor = alarm ? '#ef4444' : '#22c55e';
+  const iconHtml = alarm ? '&#9888;' : '&#128694;';
+  let text = 'Active';
+  if (alarm) text = 'INACTIVITY ALARM';
+  else if (motionNow) text = 'Activity Alert';
+  const textColor = alarm ? '#ef4444' : '#22c55e';
+
+  const onlineClass = d.online ? 'on' : 'of';
+  const onlineText  = d.online ? 'Online' : 'Offline';
+
+  return `<div class="card" id="card_${safeId}">
+    <div class="label">ACTIVITY MONITOR</div>
+    <div class="cn">${name}</div>
+    <div class="activity-icon" style="color:${iconColor}">${iconHtml}</div>
+    <div class="activity-text" style="color:${textColor}">${text}</div>
+    <div class="activity-time">Last motion: ${lastSeen}</div>
+    <div class="cd">
+      <span><span class="od ${onlineClass}"></span>${onlineText}</span>
+      ${d.extraInfo ? `<span>${d.extraInfo}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderSmokeCoTile(name, d) {
+  const smoke    = d.smoke    || false;
+  const co       = d.co       || false;
+  const coLevel  = d.coLevel  || '--';
+  // Parse temperature from extraInfo "Temp: NNF, Battery: N/4"
+  let temp = d.temperature || '--';
+  if (temp === '--' && d.extraInfo) {
+    const m = d.extraInfo.match(/Temp:\s*(\d+)\s*F/i);
+    if (m) temp = m[1];
+  }
+  const safeId   = name.replace(/[^a-zA-Z0-9]/g, '_');
+  const alert    = smoke || co;
+
+  let alerts = '';
+  if (smoke) alerts += `<div class="smoke-alert">&#128293; SMOKE DETECTED</div>`;
+  if (co)    alerts += `<div class="smoke-alert">&#9762; CO DETECTED</div>`;
+
+  return `<div class="card ${alert ? 'alert' : ''}" id="card_${safeId}">
+    <div class="label">SMOKE / CO DETECTOR</div>
+    <div class="cn">${name}</div>
+    <div class="env-grid">
+      <div class="env-item">
+        <div class="env-icon">&#128293;</div>
+        <div class="env-val" style="color:${smoke ? '#ef4444' : '#22c55e'}">${smoke ? 'YES' : 'OK'}</div>
+        <div class="env-name">Smoke</div>
+      </div>
+      <div class="env-item">
+        <div class="env-icon">&#9762;</div>
+        <div class="env-val" style="color:${co ? '#ef4444' : '#22c55e'}">${co ? 'ALARM' : 'OK'}</div>
+        <div class="env-name">CO</div>
+      </div>
+      <div class="env-item" style="grid-column: 1 / -1">
+        <div class="env-icon">&#127777;</div>
+        <div class="env-val">${temp}&deg;F</div>
+        <div class="env-name">Temperature</div>
+      </div>
+    </div>
+    ${alerts}
+  </div>`;
+}
+
+// ============================================================
+// STANDARD TILE
+// ============================================================
+function renderStandardTile(name, d) {
+  const color = getColor(d.type, d.state);
+  const icon  = getIcon(d.type);
+  const onlineClass = d.online ? 'on' : 'of';
+  const onlineText  = d.online ? 'Online' : 'Offline';
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+
+  return `<div class="card" id="card_${safeId}">
+    <div class="ct">
+      <div class="ci">${icon}</div>
+      <div>
+        <div class="cn">${name}</div>
+        <div class="cy">${d.type || ''}</div>
+      </div>
+    </div>
+    <div class="cs" style="background:${color}">${d.state || 'unknown'}</div>
+    <div class="cd">
+      <span><span class="od ${onlineClass}"></span>${onlineText}</span>
+      ${d.extraInfo ? `<span>${d.extraInfo}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// GRID UPDATE
+// ============================================================
+function updateGrid() {
+  const grid = document.getElementById('grid');
+  const allNames = Object.keys(devices);
+  if (allNames.length === 0) return;
+
+  document.getElementById('deviceCount').textContent = allNames.length;
+  document.getElementById('lastUpdate').textContent  = new Date().toLocaleTimeString();
+
+  const { sorted, duplicates } = sortNames(allNames);
+  const tieBanner = document.getElementById('tieBanner');
+  if (duplicates.size > 0) {
+    tieBanner.classList.remove('hidden');
+    tieBanner.innerHTML = '&#9888; Duplicate sequence numbers (' +
+      [...duplicates].sort((a,b)=>a-b).join(', ') + ') - fix to set order';
+  } else {
+    tieBanner.classList.add('hidden');
+  }
+
+  let html = '';
+  sorted.forEach(name => {
+    const d = devices[name];
+    const type = (d.type || '').toLowerCase();
+    const nameLower = name.toLowerCase();
+
+    let tile = '';
+    if (type === 'motionsensor' && nameLower.includes('activity')) {
+      tile = renderActivityTile(name, d);
+    } else if (type === 'bedsensor') {
+      tile = renderBedTile(name, d);
+    } else if (type === 'radarsensor' || type === 'healthsensor') {
+      tile = renderRadarTile(name, d);
+    } else if (type === 'ibeacon') {
+      tile = renderBeaconTile(name, d);
+    } else if (type === 'positionsensor') {
+      tile = renderPositionTile(name, d);
+    } else if (type === 'environment' || type === 'roomenvironment') {
+      tile = renderEnvironmentTile(name, d);
+    } else if (type === 'cosmokesensor' || type === 'smokedetector') {
+      tile = renderSmokeCoTile(name, d);
+    } else {
+      tile = renderStandardTile(name, d);
+    }
+
+    // Inject sequence input and battery after opening card div
+    const seqVal = getSeqNum(name);
+    const seqNum = parseInt(seqVal);
+    const isDup = !isNaN(seqNum) && duplicates.has(seqNum);
+    const seqClass = 'seq-input' + (isDup ? ' dup' : '');
+    const seqHtml = `<input type="text" maxlength="4" class="${seqClass}" data-name="${name}" value="${seqVal}" placeholder="#">`;
+    tile = tile.replace(/(<div class="card[^>]*">)/, '$1' + seqHtml);
+    
+    const bat = batteryHtml(d);
+    if (bat) {
+      tile = tile.replace(/(<div class="card[^>]*">)/, '$1' + bat);
+    }
+    // Inject last-update before closing card div
+    const lu = lastUpdateHtml(d);
+    if (lu) {
+      tile = tile.replace(/<\/div>$/, lu + '</div>');
+    }
+    html += tile;
+  });
+
+  grid.innerHTML = html;
+  // Attach event listeners to sequence inputs
+  grid.querySelectorAll('.seq-input').forEach(input => {
+    input.addEventListener('change', onSeqChange);
+  });
+  updateBanner();
+}
+
+function flashCard(name) {
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  const card = document.getElementById('card_' + safeId);
+  if (card) {
+    card.classList.add('updated');
+    setTimeout(() => card.classList.remove('updated'), 2000);
+  }
+}
+
+// ============================================================
+// MQTT
+// ============================================================
+const clientId = 'yolink-web-' + Math.random().toString(16).substr(2, 8);
+const PahoClient = (window.Paho && window.Paho.MQTT && window.Paho.MQTT.Client) ? Paho.MQTT.Client : Paho.Client;
+const client = new PahoClient(BROKER, PORT, '/mqtt', clientId);
+
+client.onConnectionLost = function() {
+  setBadge('Disconnected', 'mx');
+  setTimeout(connect, 5000);
+};
+
+client.onMessageArrived = function(msg) {
+  const topic = msg.destinationName;
+  const payload = msg.payloadString;
+  const parts = topic.split('/');
+  if (parts.length < 4) return;
+  const devName = parts[2].replace(/_/g, ' ');
+  const field = parts[3];
+
+  if (field === 'json') {
+    try {
+      const data = JSON.parse(payload);
+      const dataType = (data.type || '').toLowerCase();
+      
+      // Rule engine messages enrich existing device tiles instead of creating new ones
+      if (dataType === 'activityrule') {
+        // Find existing activity device (any MotionSensor with "activity" in name)
+        let targetName = null;
+        for (const n in devices) {
+          const t = (devices[n].type || '').toLowerCase();
+          if (t === 'motionsensor' && n.toLowerCase().includes('activity')) {
+            targetName = n;
+            break;
+          }
+        }
+        if (targetName) {
+          // Merge rule fields into existing device
+          devices[targetName].alarmActive     = data.alarmActive;
+          devices[targetName].elapsedSeconds  = data.elapsedSeconds;
+          devices[targetName].thresholdMinutes = data.thresholdMinutes;
+          devices[targetName].ruleEnabled     = data.enabled;
+          devices[targetName]._lastUpdate     = Date.now();
+          updateGrid();
+        }
+        return;
+      }
+      if (dataType === 'bedrule') {
+        // Find existing bed device
+        let targetName = null;
+        for (const n in devices) {
+          const t = (devices[n].type || '').toLowerCase();
+          if (t === 'bedsensor') {
+            targetName = n;
+            break;
+          }
+        }
+        if (targetName) {
+          devices[targetName].bedAlarmActive   = data.alarmActive;
+          devices[targetName].bedElapsedSeconds = data.elapsedSeconds;
+          devices[targetName].bedThresholdMin   = data.thresholdMinutes;
+          devices[targetName].bedRuleEnabled    = data.enabled;
+          devices[targetName]._lastUpdate       = Date.now();
+          updateGrid();
+        }
+        return;
+      }
+      
+      // Normal device message - create or update tile
+      if (!devices[devName]) devices[devName] = {};
+      Object.assign(devices[devName], data);
+      devices[devName].name = data.name || devName;
+      devices[devName]._lastUpdate = Date.now();
+      updateGrid();
+      flashCard(devName);
+    } catch(e) {
+      console.log('JSON parse error:', e);
+    }
+  }
+};
+
+function setBadge(text, cls) {
+  const b = document.getElementById('connBadge');
+  b.textContent = text;
+  b.className = 'ms ' + cls;
+}
+
+function connect() {
+  setBadge('Connecting...', 'my');
+  client.connect({
+    useSSL: true,
+    userName: USER,
+    password: PASS,
+    onSuccess: function() {
+      setBadge('Connected', 'mo');
+      client.subscribe(TOPIC);
+    },
+    onFailure: function() {
+      setBadge('Failed', 'mx');
+      setTimeout(connect, 10000);
+    }
+  });
+}
+
+// ============================================================
+// DEMO DATA - remove when real sensors are built
+// ============================================================
+function loadDemoData() {
+  devices['Al Health'] = {
+    name: 'Al Health', type: 'RadarSensor',
+    state: 'present_still', online: true, distance: '0.8m'
+  };
+  devices['Al iBeacon'] = {
+    name: 'Al iBeacon', type: 'iBeacon',
+    state: 'in_range', online: true, distance: '1.2m', fall: false,
+    battery: 78
+  };
+  devices['Al Position'] = {
+    name: 'Al Position', type: 'PositionSensor',
+    state: 'left', online: true
+  };
+  devices['Al Room'] = {
+    name: 'Al Room', type: 'Environment',
+    temperature: '72.4', humidity: '45',
+    sound: 'Normal', light: '12', motion: true, motionAt: 'Jan 16 at 7:02 AM'
+  };
+  
+  // Set initial timestamps for demo
+  const now = Date.now();
+  for (const n in devices) devices[n]._lastUpdate = now;
+  updateGrid();
+}
+
+// Refresh display every 30s to update timestamps
+setInterval(updateGrid, 30000);
+
+loadDemoData();
+connect();
+</script>
+</body>
+</html>
